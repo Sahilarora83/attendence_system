@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Attend - Admin Analytics Dashboard</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Advanced Event Attendance Management System with real-time analytics, student tracking, and data export capabilities.">
+    <link rel="stylesheet" href="style.css?v=2.0">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div id="app" class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i data-lucide="calendar-check" class="logo-icon"></i>
+                    <span>EventAttend</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#overview" class="nav-item active" id="nav-overview">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#students" class="nav-item" id="nav-students">
+                    <i data-lucide="users"></i>
+                    <span>Registration</span>
+                </a>
+                <a href="#present" class="nav-item" id="nav-present">
+                    <i data-lucide="user-check"></i>
+                    <span>Attendance</span>
+                </a>
+                <a href="#absent" class="nav-item" id="nav-absent">
+                    <i data-lucide="user-x"></i>
+                    <span>Absentee List</span>
+                </a>
+                <div class="nav-divider"></div>
+                <button class="nav-item export-trigger" id="export-menu-btn">
+                    <i data-lucide="download"></i>
+                    <span>Export Reports</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot online"></span>
+                    <span id="sync-status">Offline Mode</span>
+                </div>
+                <div class="status-indicator" style="margin-top: 0.5rem;">
+                    <span class="dot" id="server-dot"></span>
+                    <span id="server-status">Cloud Sync: Live</span>
+                </div>
+                <button id="sync-to-cloud" class="btn btn-outline" style="margin-top: 1rem; width: 100%; font-size: 0.75rem; border-color: rgba(255,255,255,0.2); color: white;">
+                    <i data-lucide="cloud-upload" style="width: 14px; height: 14px;"></i>
+                    Sync Local to Cloud
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button id="mobile-toggle" class="mobile-toggle">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <div>
+                        <h1 id="page-title">Dashboard Overview</h1>
+                        <p class="subtitle" id="last-updated">Last update: Just now</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <!-- Global Search removed from here -->
+                </div>
+            </header>
+
+            <!-- Statistics Cards -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon bg-indigo">
+                        <i data-lucide="users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Registered</h3>
+                        <p id="stat-total">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-emerald">
+                        <i data-lucide="user-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Present</h3>
+                        <p id="stat-present" class="text-emerald">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-rose">
+                        <i data-lucide="user-x"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Absent</h3>
+                        <p id="stat-absent" class="text-rose">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon bg-amber">
+                        <i data-lucide="pie-chart"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Attendance</h3>
+                        <p id="stat-percent">0%</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3>Course Distribution</h3>
+                        <div class="chart-actions">
+                            <i data-lucide="more-vertical"></i>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="courseChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3>Attendance Status</h3>
+                        <div class="chart-actions">
+                            <i data-lucide="more-vertical"></i>
+                        </div>
+                    </div>
+                    <div class="chart-body pie-wrapper">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container full-width">
+                    <div class="chart-header">
+                        <h3>Registration Timeline</h3>
+                        <div class="chart-actions">
+                            <i data-lucide="calendar"></i>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filters & Data Table Section -->
+            <section class="table-section">
+                <div class="table-controls">
+                    <div class="search-group">
+                        <div class="search-inner">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="global-search" placeholder="Search by name, roll, or phone...">
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <select id="filter-course">
+                            <option value="">All Courses</option>
+                        </select>
+                        <select id="filter-status">
+                            <option value="">All Status</option>
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                        </select>
+                    </div>
+                    <div class="actions">
+                        <input type="file" id="csv-upload" accept=".csv" style="display: none;">
+                        <button id="upload-btn" class="btn btn-outline" style="background: var(--primary); color: white; border: none;">
+                            <i data-lucide="upload"></i>
+                            Load IMS CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="student-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Roll Number</th>
+                                <th>Course</th>
+                                <th>Phone</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-tbody">
+                            <!-- Table rows will be injected by JavaScript -->
+                            <tr>
+                                <td colspan="7" class="loading-state">
+                                    <div class="spinner"></div>
+                                    Waiting for CSV data... Use the "Load IMS CSV" button.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Export Modal -->
+        <div id="export-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Export Data Reports</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="export-scope-selector" style="margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Select Data Scope:</label>
+                    <select id="export-scope" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-family: inherit;">
+                        <option value="all">Export All Students</option>
+                        <option value="present">Export ONLY Present</option>
+                        <option value="absent">Export ONLY Absent</option>
+                        <option value="filtered">Export Currently Filtered View</option>
+                    </select>
+                </div>
+                <div class="export-options">
+                    <div class="export-card" onclick="startExport('xlsx')">
+                        <div class="export-icon bg-green">
+                            <i data-lucide="file-spreadsheet"></i>
+                        </div>
+                        <div class="export-details">
+                            <h4>Excel Spreadsheet (.xlsx)</h4>
+                            <p>Best for data analysis and manual editing.</p>
+                        </div>
+                    </div>
+                    <div class="export-card" onclick="startExport('csv')">
+                        <div class="export-icon bg-blue">
+                            <i data-lucide="file-text"></i>
+                        </div>
+                        <div class="export-details">
+                            <h4>CSV File (.csv)</h4>
+                            <p>Standard format for importing into other tools.</p>
+                        </div>
+                    </div>
+                    <div class="export-card" onclick="startExport('pdf')">
+                        <div class="export-icon bg-red">
+                            <i data-lucide="file-bar-chart"></i>
+                        </div>
+                        <div class="export-details">
+                            <h4>PDF Report (.pdf)</h4>
+                            <p>Professional summary with charts and stats.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Notification Overlay -->
+    <div id="notification-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
