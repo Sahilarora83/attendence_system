@@ -15,7 +15,7 @@ const CONFIG = {
 // 🚀 Supabase Configuration
 const SB_URL = 'https://ctrcyiiryhxzcyngjgsp.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0cmN5aWlyeWh4emN5bmdqZ3NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzNDc5NzYsImV4cCI6MjA4ODkyMzk3Nn0.FQIFrCu0IqfOCT1xFdLpsyv8S7KI5h9by_6XjtHT6-Q';
-const supabase = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+const supabaseClient = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 
 let students = [];
 let filteredStudents = [];
@@ -90,9 +90,9 @@ async function checkServerStatus() {
 async function loadData() {
     updateSyncStatus('Checking for data...', 'pulse');
     // 1. Try to fetch from Supabase (Primary Cloud Storage)
-    if (supabase) {
+    if (supabaseClient) {
         try {
-            const { data, error } = await supabase.from('students').select('*');
+            const { data, error } = await supabaseClient.from('students').select('*');
             if (!error && data && data.length > 0) {
                 console.log('Data loaded from Cloud (Supabase)');
                 students = data;
@@ -504,9 +504,9 @@ async function toggleStatus(roll) {
     student.status = (student.status === 'Present') ? 'Absent' : 'Present';
     
     // 1. Update Cloud (Supabase) - Instant sync
-    if (supabase) {
+    if (supabaseClient) {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('students')
                 .upsert(student);
             
@@ -531,7 +531,7 @@ async function toggleStatus(roll) {
  * Migration Function: Syncs current Local Data to Cloud
  */
 async function migrateLocalToCloud() {
-    if (!supabase) return showNotification('Supabase not initialized!', 'error');
+    if (!supabaseClient) return showNotification('Supabase not initialized!', 'error');
     
     const btn = document.getElementById('sync-to-cloud');
     const originalText = btn.innerHTML;
@@ -544,7 +544,7 @@ async function migrateLocalToCloud() {
         const chunkSize = 50;
         for (let i = 0; i < students.length; i += chunkSize) {
             const chunk = students.slice(i, i + chunkSize);
-            const { error } = await supabase.from('students').upsert(chunk);
+            const { error } = await supabaseClient.from('students').upsert(chunk);
             if (error) throw error;
         }
         
