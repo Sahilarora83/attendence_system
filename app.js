@@ -693,7 +693,7 @@ function exportData(format, scope = 'all') {
     const dataToExport = source.map(s => ({
         'Timestamp': s.timestamp,
         'Username': s.username,
-        'Full Name': s.fullName,
+        'Full Name': s.fullName || s.fullname || '',
         'Email ID': s.email,
         'Roll Number': s.roll,
         'Phone Number': s.phone,
@@ -714,7 +714,7 @@ function exportData(format, scope = 'all') {
         doc.autoTable({
             startY: 40,
             head: [['Timestamp', 'Full Name', 'Roll Number', 'Phone', 'Course', 'Status']],
-            body: source.map(s => [s.timestamp, s.fullName, s.roll, s.phone, s.course, s.status]),
+            body: source.map(s => [s.timestamp, s.fullName || s.fullname || '', s.roll, s.phone, s.course, s.status]),
             theme: 'striped',
             headStyles: { fillColor: [99, 102, 241], fontSize: 8 },
             styles: { fontSize: 7 }
