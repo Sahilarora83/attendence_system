@@ -433,7 +433,7 @@ function renderTable() {
 
         tr.innerHTML = `
             <td>
-                <div style="font-weight: 600;">${highlight(student.fullName)}</div>
+                <div style="font-weight: 600;">${highlight(student.fullName || student.fullname || 'Unknown')}</div>
                 <div style="font-size: 0.75rem; color: #64748b;">${student.username}</div>
             </td>
             <td><code>${highlight(student.roll)}</code></td>
@@ -564,6 +564,13 @@ async function migrateLocalToCloud() {
  * Sends data to local server.js to save files in folders
  */
 async function triggerLocalBackup() {
+    // Only try local backup if we are running locally
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const text = document.getElementById('server-status');
+        if (text) text.style.display = 'none'; // Hide backup status on Vercel
+        return;
+    }
+    
     const text = document.getElementById('server-status');
     try {
         const response = await fetch('http://localhost:3001/backup', {
@@ -573,13 +580,13 @@ async function triggerLocalBackup() {
         });
         if (response.ok) {
             console.log('Local backup successful');
-            if (text.textContent.includes('Pending')) {
+            if (text && text.textContent.includes('Pending')) {
                 text.textContent = 'Backup Server: Live';
             }
         }
     } catch (e) {
         console.warn('Backup server is down. Saving to browser memory only.');
-        text.textContent = 'Backup Server: Sync Pending...';
+        if (text) text.textContent = 'Backup Server: Sync Pending...';
     }
 }
 
