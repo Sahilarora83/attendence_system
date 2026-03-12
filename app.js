@@ -62,6 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
 async function checkServerStatus() {
     const dot = document.getElementById('server-dot');
     const text = document.getElementById('server-status');
+    
+    // Only check local server if running locally
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        if (dot && dot.parentElement) dot.parentElement.style.display = 'none';
+        return;
+    }
+
     try {
         const res = await fetch('http://localhost:3001/backup', { method: 'OPTIONS' });
         if (res.ok || res.status === 204) {
@@ -524,7 +531,7 @@ async function toggleStatus(roll) {
     renderTable();
     updateStats();
     updateCharts();
-    showNotification(`${student.fullName} is now ${student.status}.`, 'success');
+    showNotification(`${student.fullName || student.fullname || 'Student'} is now ${student.status}.`, 'success');
 }
 
 /**
